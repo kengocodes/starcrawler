@@ -52,3 +52,5 @@ export function LogoPhase({ text, duration }: LogoPhaseProps) {
   );
 }
 
+
+
