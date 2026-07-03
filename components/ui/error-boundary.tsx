@@ -1,11 +1,21 @@
 "use client";
 
-import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
+import {
+  ErrorBoundary as ReactErrorBoundary,
+  type FallbackProps,
+} from "react-error-boundary";
 import { RotateCcw } from "lucide-react";
 
-interface ErrorFallbackProps {
-  error: Error;
-  resetErrorBoundary: () => void;
+type ErrorFallbackProps = FallbackProps;
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+  return "Unknown error";
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
@@ -24,7 +34,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
         </p>
         {process.env.NODE_ENV === "development" && (
           <p className="font-opening-text text-xs text-red-300/70">
-            {error.message}
+            {getErrorMessage(error)}
           </p>
         )}
         <button
@@ -48,7 +58,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ComponentType<ErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onError?: (error: unknown, errorInfo: React.ErrorInfo) => void;
 }
 
 export function ErrorBoundary({
@@ -56,7 +66,7 @@ export function ErrorBoundary({
   fallback,
   onError,
 }: ErrorBoundaryProps) {
-  const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
+  const handleError = (error: unknown, errorInfo: React.ErrorInfo) => {
     // Log error in development
     if (process.env.NODE_ENV === "development") {
       console.error("ErrorBoundary caught an error:", error, errorInfo);

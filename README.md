@@ -78,7 +78,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to see the a
 ### Styling & UI
 
 - **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[Framer Motion](https://www.framer.com/motion/)** - Animation library
+- **[Motion](https://motion.dev/)** - Animation library
 - **[Lucide React](https://lucide.dev/)** - Icon library
 
 ### Key Libraries

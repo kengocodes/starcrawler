@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { STARFIELD_CONSTANTS } from "@/lib/constants";
 
 // Generate random stars for a layer - fill the entire screen

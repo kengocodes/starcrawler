@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { RotateCcw, Share2, Check } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Starfield } from "@/components/crawl/starfield";
 import { CrawlInput } from "@/components/crawl/crawl-input";
 import { CrawlDisplay } from "@/components/crawl/crawl-display";

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Github } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FooterProps {
@@ -75,7 +75,7 @@ export function Footer({ className }: FooterProps) {
             }}
             aria-label="View Star Crawler on GitHub"
           >
-            <Github className="size-3.5 sm:size-3.5" aria-hidden="true" />
+            <GitBranch className="size-3.5 sm:size-3.5" aria-hidden="true" />
             <span>GitHub</span>
           </a>
         </nav>
