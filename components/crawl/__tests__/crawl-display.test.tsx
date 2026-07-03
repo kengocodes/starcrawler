@@ -6,7 +6,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 const setMock = vi.fn();
 const startMock = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("framer-motion", () => {
+vi.mock("motion/react", () => {
   // Simplify motion components to plain elements
   const ProxyDiv = (props: any) => <div {...props} />;
   return {

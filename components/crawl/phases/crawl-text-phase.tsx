@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import type { AnimationControls } from "../hooks/types";
 import { CRAWL_CONSTANTS } from "@/lib/constants";
 import type { CrawlData } from "@/lib/types";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { useAnimation } from "framer-motion";
+import { useAnimation } from "motion/react";
 import { X } from "lucide-react";
 
 import { CRAWL_CONSTANTS } from "@/lib/constants";

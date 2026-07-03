@@ -1,8 +1,8 @@
-import type { useAnimation } from "framer-motion";
+import type { useAnimation } from "motion/react";
 import type { CrawlData } from "@/lib/types";
 
 /**
- * Animation controls type from framer-motion's useAnimation hook
+ * Animation controls type from Motion's useAnimation hook
  */
 export type AnimationControls = ReturnType<typeof useAnimation>;
 
