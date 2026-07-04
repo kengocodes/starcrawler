@@ -38,6 +38,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
           </p>
         )}
         <button
+          type="button"
           onClick={resetErrorBoundary}
           className="inline-flex items-center gap-1.5 border-2 border-red-500/40 bg-black/60 px-3 py-1.5 font-crawl text-xs font-bold uppercase tracking-wider text-red-400 backdrop-blur-sm transition-colors hover:border-red-500 hover:bg-red-500/10 active:scale-95 touch-manipulation cursor-pointer"
           style={{

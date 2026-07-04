@@ -59,6 +59,7 @@ export default function Error({ error, reset }: ErrorProps) {
           {/* Action Buttons */}
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button
+              type="button"
               onClick={reset}
               className="inline-flex items-center gap-2 border-2 border-crawl-yellow/40 bg-black/80 px-5 py-3 font-crawl text-sm font-bold uppercase tracking-wider text-crawl-yellow backdrop-blur-sm transition-colors hover:border-crawl-yellow hover:bg-crawl-yellow/10 active:bg-crawl-yellow/20 active:scale-95 touch-manipulation cursor-pointer min-h-[44px]"
               style={{

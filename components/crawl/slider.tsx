@@ -41,7 +41,16 @@ export function Slider({
   const thumbRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [localValue, setLocalValue] = useState<number | null>(null);
+  const [prevValue, setPrevValue] = useState(value);
   const localValueRef = useRef<number | null>(null);
+
+  if (!isDragging && value !== prevValue) {
+    setPrevValue(value);
+    if (localValue !== null) {
+      localValueRef.current = null;
+      setLocalValue(null);
+    }
+  }
 
   // Use local value during drag for immediate visual feedback, otherwise use prop value
   const displayValue = localValue !== null ? localValue : value;
@@ -135,21 +144,19 @@ export function Slider({
     [disabled, min, max, step, clampedValue, onChange, onCommit]
   );
 
-  // Handle track click (immediate seek)
-  const handleTrackClick = useCallback(
-    (e: React.MouseEvent) => {
+  // Handle track pointer down (immediate seek)
+  const handleTrackPointerDown = useCallback(
+    (e: React.PointerEvent) => {
       if (disabled || isDragging) return;
-      
-      // Ignore clicks on the thumb (thumb handles its own pointer events)
+
+      // Ignore presses on the thumb (thumb handles its own pointer events)
       if (thumbRef.current?.contains(e.target as Node)) {
         return;
       }
 
       const newValue = getValueFromX(e.clientX);
       onChange(newValue);
-      if (onCommit) {
-        onCommit(newValue);
-      }
+      onCommit?.(newValue);
     },
     [disabled, isDragging, getValueFromX, onChange, onCommit]
   );
@@ -207,25 +214,11 @@ export function Slider({
     };
   }, [isDragging, getValueFromX, onChange, onCommit]);
 
-  // Sync local value with prop value when not dragging
-  useEffect(() => {
-    if (!isDragging && localValue !== null) {
-      localValueRef.current = null;
-      setLocalValue(null);
-    }
-  }, [isDragging, localValue, value]);
-
   return (
     <div
       ref={trackRef}
       className={`relative flex h-5 w-full touch-none select-none items-center cursor-pointer ${trackClassName} ${className}`}
-      onClick={handleTrackClick}
-      role="slider"
-      aria-label={ariaLabel}
-      aria-valuemin={min}
-      aria-valuemax={max}
-      aria-valuenow={clampedValue}
-      aria-disabled={disabled}
+      onPointerDown={handleTrackPointerDown}
       style={{ touchAction: "none" }}
     >
       {/* Track */}
@@ -251,6 +244,12 @@ export function Slider({
       {/* Thumb */}
       <div
         ref={thumbRef}
+        role="slider"
+        aria-label={ariaLabel}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={clampedValue}
+        aria-disabled={disabled}
         className={`absolute block h-5 w-5 border-2 border-crawl-yellow bg-crawl-yellow shadow-md cursor-grab touch-manipulation ${
           isDragging ? "cursor-grabbing scale-110" : "transition-all hover:scale-110"
         } focus:outline-none focus:ring-2 focus:ring-crawl-yellow focus:ring-offset-2 focus:ring-offset-black ${thumbClassName}`}

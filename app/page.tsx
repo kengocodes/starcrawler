@@ -46,9 +46,7 @@ function HomeContent() {
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [lastEncodedUrl, setLastEncodedUrl] = useState<string | null>(
-    initialEncoded
-  );
+  const lastEncodedUrlRef = useRef<string | null>(initialEncoded);
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [remaining, setRemaining] = useState(0);
@@ -69,13 +67,13 @@ function HomeContent() {
     const encoded = searchParams.get("crawl");
 
     // Only reload if URL param changed
-    if (encoded === lastEncodedUrl) return;
+    if (encoded === lastEncodedUrlRef.current) return;
 
     if (encoded) {
       const decoded = decodeCrawlData(encoded);
       if (decoded) {
         setCrawlData(decoded);
-        setLastEncodedUrl(encoded);
+        lastEncodedUrlRef.current = encoded;
         // Only auto-play if this is a shared link (not our own form submission)
         if (!isPlaying) {
           setIsPlaying(true);
@@ -84,13 +82,13 @@ function HomeContent() {
       }
     } else {
       // No crawl param - clear data if it was previously loaded from URL
-      if (lastEncodedUrl !== null && !isPlaying) {
+      if (lastEncodedUrlRef.current !== null && !isPlaying) {
         setCrawlData(null);
         setIsPlaying(false);
-        setLastEncodedUrl(null);
+        lastEncodedUrlRef.current = null;
       }
     }
-  }, [searchParams, lastEncodedUrl, isPlaying]);
+  }, [searchParams, isPlaying]);
 
   // Handle form submission
   const handleSubmit = (data: CrawlData) => {
@@ -102,7 +100,7 @@ function HomeContent() {
     setCrawlData(data);
     setIsPlaying(true);
     setIsPaused(false);
-    setLastEncodedUrl(encoded);
+    lastEncodedUrlRef.current = encoded;
 
     // Update URL after state is set (non-blocking, won't interfere with playback)
     requestAnimationFrame(() => {
@@ -351,6 +349,7 @@ function HomeContent() {
             {crawlData && !isPlaying && (
               <div className="mt-6 flex justify-center gap-3">
                 <button
+                  type="button"
                   onClick={handleShareUrl}
                   className="inline-flex items-center gap-2 border-2 border-crawl-yellow/40 bg-black/80 px-4 min-[375px]:px-5 py-2.5 font-crawl text-sm font-bold uppercase tracking-wider text-crawl-yellow backdrop-blur-sm transition-colors hover:border-crawl-yellow hover:bg-crawl-yellow/10 active:bg-crawl-yellow/20 active:scale-95 touch-manipulation cursor-pointer min-h-[44px]"
                   style={{
@@ -374,6 +373,7 @@ function HomeContent() {
                   )}
                 </button>
                 <button
+                  type="button"
                   onClick={handleReset}
                   className="inline-flex items-center gap-2 border-2 border-crawl-yellow/40 bg-black/80 px-4 min-[375px]:px-5 py-2.5 font-crawl text-sm font-bold uppercase tracking-wider text-crawl-yellow backdrop-blur-sm transition-colors hover:border-crawl-yellow hover:bg-crawl-yellow/10 active:bg-crawl-yellow/20 active:scale-95 touch-manipulation cursor-pointer min-h-[44px]"
                   style={{

@@ -87,7 +87,7 @@ export function Footer({ className }: FooterProps) {
               "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
           }}
         >
-          © {new Date().getFullYear()} Star Crawler. All rights reserved.
+          © <span suppressHydrationWarning>{new Date().getFullYear()}</span> Star Crawler. All rights reserved.
         </p>
       </div>
     </footer>

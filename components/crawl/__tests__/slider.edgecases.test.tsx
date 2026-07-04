@@ -21,14 +21,15 @@ describe("Slider edge cases", () => {
     );
 
     const slider = screen.getByRole("slider", { name: /test slider/i });
+    const track = slider.parentElement!;
 
     // Stub getBoundingClientRect to simulate zero-width track
-    const original = slider.getBoundingClientRect;
-    slider.getBoundingClientRect = () =>
+    const original = track.getBoundingClientRect;
+    track.getBoundingClientRect = () =>
       ({ left: 0, width: 0 } as DOMRect) as DOMRect;
 
-    // Click on the track
-    fireEvent.click(slider, { clientX: 50 });
+    // Press on the track
+    fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
 
     // Should not jump; should use current value as fallback
     expect(onChange).toHaveBeenCalled();
@@ -37,7 +38,7 @@ describe("Slider edge cases", () => {
     expect(onCommit.mock.calls[0][0]).toBeCloseTo(value, 5);
 
     // Restore
-    slider.getBoundingClientRect = original;
+    track.getBoundingClientRect = original;
   });
 });
 

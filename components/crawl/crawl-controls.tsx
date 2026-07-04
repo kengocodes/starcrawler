@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useEffectEvent } from "react";
 import { Slider } from "./slider";
 import {
   Play,
@@ -140,6 +140,7 @@ export function CrawlControls({
     useCopyFeedback();
   const [internalVisible, setInternalVisible] = useState(false);
   const [showCenterButton, setShowCenterButton] = useState(false);
+  const prevIsVisibleRef = useRef<boolean | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wasPausedBeforeDragRef = useRef<boolean | null>(null);
   const isDraggingRef = useRef(false);
@@ -149,6 +150,13 @@ export function CrawlControls({
   const isVisible =
     externalVisible !== undefined ? externalVisible : internalVisible;
   const setIsVisible = onControlsVisibilityChange || setInternalVisible;
+
+  if (prevIsVisibleRef.current !== isVisible) {
+    prevIsVisibleRef.current = isVisible;
+    if (isVisible !== showCenterButton) {
+      setShowCenterButton(isVisible);
+    }
+  }
 
   const clearHideTimeout = useCallback(() => {
     if (hideTimeoutRef.current) {
@@ -183,26 +191,27 @@ export function CrawlControls({
     [clearHideTimeout, scheduleHide, setIsVisible]
   );
 
+  const handleMouseMoveControls = useEffectEvent(() => {
+    showControls();
+  });
+
   // Desktop: show controls on mouse move with auto-hide
   useEffect(() => {
     const handleMouseMove = () => {
-      showControls();
+      handleMouseMoveControls();
     };
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       clearHideTimeout();
     };
-  }, [showControls, clearHideTimeout]);
+  }, [clearHideTimeout]);
 
   // When visibility is toggled externally (e.g., by CrawlDisplay), manage auto-hide timer
-  // This ensures controls auto-hide after 3 seconds of inactivity (YouTube-like behavior)
   useEffect(() => {
     if (isVisible) {
-      setShowCenterButton(true);
       scheduleHide();
     } else {
-      // Controls are hidden - clear any pending timeout
       clearHideTimeout();
     }
     return clearHideTimeout;
@@ -300,6 +309,7 @@ export function CrawlControls({
           data-controls-area
         >
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation(); // Prevent triggering crawl-display's handleInteraction
               if (isPaused) {

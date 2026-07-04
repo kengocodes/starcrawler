@@ -24,12 +24,7 @@ export default function DisclaimerPage() {
   return (
     <LegalLayout title="Disclaimer">
       <p className="text-gray-300">
-        <strong>Last Updated:</strong>{" "}
-        {new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
+        <strong>Last Updated:</strong> January 1, 2026
       </p>
 
       <h2>We're Not Connected to Star Wars</h2>

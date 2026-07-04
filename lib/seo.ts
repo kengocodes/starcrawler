@@ -53,7 +53,7 @@ export const siteConfig = {
 /**
  * Generate absolute URL from a relative path
  */
-export function getAbsoluteUrl(path: string): string {
+function getAbsoluteUrl(path: string): string {
   return `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -88,7 +88,7 @@ export function getWebApplicationStructuredData() {
 /**
  * Generate WebPage structured data
  */
-export function getWebPageStructuredData({
+function getWebPageStructuredData({
   title,
   description,
   path,

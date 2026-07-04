@@ -9,8 +9,16 @@ export interface FormInputProps
   errorMessage?: string;
 }
 
-const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
-  ({ label, labelColor = "yellow", className, id, error, errorMessage, ...props }, ref) => {
+const FormInput = ({
+  label,
+  labelColor = "yellow",
+  className,
+  id,
+  error,
+  errorMessage,
+  ref,
+  ...props
+}: FormInputProps & { ref?: React.Ref<HTMLInputElement> }) => {
     const inputId = id || `input-${label.toLowerCase().replace(/\s+/g, "-")}`;
     const labelColorClass =
       labelColor === "cyan"
@@ -61,8 +69,7 @@ const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
         )}
       </div>
     );
-  }
-);
+};
 FormInput.displayName = "FormInput";
 
 export { FormInput };
