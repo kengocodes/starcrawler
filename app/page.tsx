@@ -114,12 +114,13 @@ function HomeContent() {
     });
   };
 
-  // Handle animation completion
-  const handleComplete = () => {
+  // Handle animation completion (memoized: it's a dependency of the keydown
+  // effect below, which would otherwise re-subscribe on every render)
+  const handleComplete = useCallback(() => {
     setIsPlaying(false);
     setIsPaused(false);
     setCrawlPhase("opening-text");
-  };
+  }, []);
 
   // Handle pause/resume
   const handlePause = useCallback(() => {
@@ -225,6 +226,9 @@ function HomeContent() {
           handleToggleFullscreen();
           break;
         case "Escape":
+          // In fullscreen, Escape should only exit fullscreen (handled
+          // natively by the browser), not also close the crawl
+          if (document.fullscreenElement) break;
           e.preventDefault();
           handleComplete();
           break;

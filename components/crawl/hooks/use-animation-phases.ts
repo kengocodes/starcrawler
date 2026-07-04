@@ -10,13 +10,11 @@ interface UseAnimationPhasesParams {
   isPaused: boolean;
   phase: AnimationPhase;
   crawlStarted: boolean;
-  isComplete: boolean;
   durations: AnimationDurations;
   timingRefs: TimingRefs;
   controls: AnimationControls;
   onPhaseChange: (phase: AnimationPhase) => void;
   onStartCrawl: () => void;
-  onComplete: () => void;
   onReset: () => void;
 }
 
@@ -29,13 +27,11 @@ export function useAnimationPhases({
   isPaused,
   phase,
   crawlStarted,
-  isComplete,
   durations,
   timingRefs,
   controls,
   onPhaseChange,
   onStartCrawl,
-  onComplete,
   onReset,
 }: UseAnimationPhasesParams): void {
   // Reset everything when playback stops
@@ -51,7 +47,9 @@ export function useAnimationPhases({
   useEffect(() => {
     if (!isPlaying) return;
 
-    // Skip if in crawl phase - crawl animation handles its own timing
+    // Skip if in crawl phase - the crawl animation manages its own timing refs,
+    // and completion is detected by useProgressTracking (which re-reads the
+    // timing refs every tick, so it stays correct across seeks and pauses).
     if (phase === "crawl" && crawlStarted) return;
 
     // Initialize phase start time if not set
@@ -123,28 +121,6 @@ export function useAnimationPhases({
       };
     }
 
-    // Crawl phase completion timer
-    if (phase === "crawl" && !isComplete && crawlStarted) {
-      const crawlElapsed = timingRefs.crawlStartTime.current
-        ? (Date.now() -
-            timingRefs.crawlStartTime.current -
-            timingRefs.crawlPausedTime.current) /
-          1000
-        : 0;
-      const crawlRemaining = Math.max(0, durations.crawl - crawlElapsed);
-
-      if (crawlRemaining <= 0) {
-        onComplete();
-        return;
-      }
-
-      const timer = setTimeout(() => {
-        onComplete();
-      }, crawlRemaining * 1000);
-
-      return () => clearTimeout(timer);
-    }
-
     function transitionToPhase(newPhase: AnimationPhase) {
       onPhaseChange(newPhase);
       timingRefs.phaseStartTime.current = Date.now();
@@ -155,12 +131,10 @@ export function useAnimationPhases({
     isPaused,
     phase,
     crawlStarted,
-    isComplete,
     durations,
     timingRefs,
     onPhaseChange,
     onStartCrawl,
-    onComplete,
   ]);
 }
 

@@ -89,6 +89,52 @@ export function Slider({
     [disabled, value]
   );
 
+  // Keyboard support for the focusable thumb (required for role="slider")
+  const handleThumbKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (disabled) return;
+
+      const range = max - min;
+      const smallStep = Math.max(step, range / 100);
+      const largeStep = range / 10;
+
+      let newValue: number;
+      switch (e.key) {
+        case "ArrowRight":
+        case "ArrowUp":
+          newValue = clampedValue + smallStep;
+          break;
+        case "ArrowLeft":
+        case "ArrowDown":
+          newValue = clampedValue - smallStep;
+          break;
+        case "PageUp":
+          newValue = clampedValue + largeStep;
+          break;
+        case "PageDown":
+          newValue = clampedValue - largeStep;
+          break;
+        case "Home":
+          newValue = min;
+          break;
+        case "End":
+          newValue = max;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      // Keep global shortcuts (e.g. arrow-key seeking) from also firing
+      e.stopPropagation();
+
+      newValue = Math.max(min, Math.min(max, newValue));
+      onChange(newValue);
+      onCommit?.(newValue);
+    },
+    [disabled, min, max, step, clampedValue, onChange, onCommit]
+  );
+
   // Handle track click (immediate seek)
   const handleTrackClick = useCallback(
     (e: React.MouseEvent) => {
@@ -216,6 +262,7 @@ export function Slider({
           transition: isDragging ? "none" : undefined,
         }}
         onPointerDown={handleThumbPointerDown}
+        onKeyDown={handleThumbKeyDown}
         tabIndex={disabled ? -1 : 0}
       />
     </div>

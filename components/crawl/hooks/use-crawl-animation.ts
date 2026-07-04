@@ -96,9 +96,13 @@ export function useCrawlAnimation({
     onStartAnimation,
   ]);
 
-  // Handle pause/resume for crawl animation
+  // Handle pause/resume for crawl animation.
+  // Note: no phase check here - the crawl animation starts a few seconds
+  // before the logo phase ends, so it must pause/resume during that overlap
+  // too (otherwise it keeps scrolling while "paused" and its pause time is
+  // never accounted for).
   useEffect(() => {
-    if (phase !== "crawl" || !crawlStarted || !animationStarted) return;
+    if (!crawlStarted || !animationStarted) return;
 
     if (isPaused) {
       // Pause: stop animation and track pause start time
@@ -141,7 +145,6 @@ export function useCrawlAnimation({
     }
   }, [
     isPaused,
-    phase,
     crawlStarted,
     animationStarted,
     durations.crawl,

@@ -102,6 +102,9 @@ export interface OpeningTextPhaseProps {
 export interface LogoPhaseProps {
   text: string;
   duration: number;
+  isPaused?: boolean;
+  /** Seconds already elapsed in the logo phase (nonzero when mounting mid-phase after a seek) */
+  startOffset?: number;
 }
 
 export interface CrawlTextPhaseProps {

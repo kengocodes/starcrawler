@@ -56,14 +56,12 @@ export function useSeek({
 
     const seekTarget = calculateSeekTarget(seekTo, durations);
 
-    // Reset timing refs for seek
-    resetTimingForSeek(timingRefs, seekTarget);
-
     if (seekTarget.phase === "opening-text") {
-      seekToOpeningText(seekTarget, timingRefs, controls, onPhaseChange, onResetState);
+      seekToOpeningText(seekTarget, isPaused, durations, timingRefs, controls, onPhaseChange, onResetState);
     } else if (seekTarget.phase === "logo") {
-      seekToLogo(seekTarget, timingRefs, controls, onPhaseChange, onResetState);
+      seekToLogo(seekTarget, isPaused, durations, timingRefs, controls, onPhaseChange, onResetState);
     } else {
+      resetTimingForSeek(timingRefs, seekTarget, isPaused);
       seekToCrawl(
         seekTarget,
         isPaused,
@@ -142,54 +140,84 @@ function calculateSeekTarget(seekProgress: number, durations: AnimationDurations
 /**
  * Reset timing refs for a seek operation
  */
-function resetTimingForSeek(timingRefs: TimingRefs, target: SeekTarget): void {
+function resetTimingForSeek(
+  timingRefs: TimingRefs,
+  target: SeekTarget,
+  isPaused: boolean
+): void {
   const now = Date.now();
 
-  // Reset overall timing
+  // Reset overall timing. If currently paused, keep tracking the ongoing
+  // pause from the seek moment - otherwise the paused time would silently
+  // count as elapsed and playback would jump ahead on resume.
   timingRefs.overallStartTime.current = now - target.overallTime * 1000;
   timingRefs.overallPausedTime.current = 0;
-  timingRefs.overallPauseStart.current = null;
+  timingRefs.overallPauseStart.current = isPaused ? now : null;
 
   // Reset completion guard
   timingRefs.hasCompleted.current = false;
 }
 
+/**
+ * Set the phase clock so that `phaseProgress` of `phaseDuration` has elapsed.
+ * If paused, anchor an ongoing pause at the seek moment so the time spent
+ * paused after the seek is not counted as elapsed.
+ */
+function setPhaseTimingForSeek(
+  timingRefs: TimingRefs,
+  phaseProgress: number,
+  phaseDuration: number,
+  isPaused: boolean
+): void {
+  const now = Date.now();
+  timingRefs.phaseStartTime.current = now - phaseProgress * phaseDuration * 1000;
+  timingRefs.phasePausedTime.current = 0;
+  timingRefs.phasePauseStart.current = isPaused ? now : null;
+}
+
 function seekToOpeningText(
   target: SeekTarget,
+  isPaused: boolean,
+  durations: AnimationDurations,
   timingRefs: TimingRefs,
   controls: AnimationControls,
   onPhaseChange: (phase: AnimationPhase) => void,
   onResetState: () => void
 ): void {
+  // Full reset first (clears crawlStarted/animationStarted and all timing
+  // refs), then restore the overall clock at the seeked position. Order
+  // matters: resetting after would wipe the overall start time and freeze
+  // progress reporting.
   onResetState();
+  resetTimingForSeek(timingRefs, target, isPaused);
   onPhaseChange("opening-text");
 
-  // Set phase timing
-  timingRefs.phaseStartTime.current = Date.now() - target.phaseProgress * 6 * 1000; // Approximate opening text duration
-  timingRefs.phasePausedTime.current = 0;
-  timingRefs.phasePauseStart.current = null;
+  // durations.openingText is the actual phase duration (it may be shortened
+  // by the reduced-motion preference)
+  setPhaseTimingForSeek(timingRefs, target.phaseProgress, durations.openingText, isPaused);
 
   controls.stop();
-  controls.set({ y: CRAWL_CONSTANTS.CRAWL_START_POSITION });
+  controls.set({ y: CRAWL_CONSTANTS.CRAWL_START_POSITION, opacity: 1 });
 }
 
 function seekToLogo(
   target: SeekTarget,
+  isPaused: boolean,
+  durations: AnimationDurations,
   timingRefs: TimingRefs,
   controls: AnimationControls,
   onPhaseChange: (phase: AnimationPhase) => void,
   onResetState: () => void
 ): void {
+  // Full reset first, then restore the overall clock (see seekToOpeningText)
   onResetState();
+  resetTimingForSeek(timingRefs, target, isPaused);
   onPhaseChange("logo");
 
-  // Set phase timing
-  timingRefs.phaseStartTime.current = Date.now() - target.phaseProgress * 8 * 1000; // Approximate logo duration
-  timingRefs.phasePausedTime.current = 0;
-  timingRefs.phasePauseStart.current = null;
+  setPhaseTimingForSeek(timingRefs, target.phaseProgress, durations.logo, isPaused);
 
   controls.stop();
-  controls.set({ y: CRAWL_CONSTANTS.CRAWL_START_POSITION });
+  controls.set({ y: CRAWL_CONSTANTS.CRAWL_START_POSITION, opacity: 1 });
 }
 
 function seekToCrawl(
@@ -207,11 +235,13 @@ function seekToCrawl(
   onStartCrawl();
   onStartAnimation();
 
-  // Set crawl timing
+  // Set crawl timing. If paused, anchor an ongoing pause at the seek moment
+  // so time spent paused after the seek is not counted as elapsed on resume.
+  const now = Date.now();
   const crawlElapsed = durations.crawl * target.crawlProgress;
-  timingRefs.crawlStartTime.current = Date.now() - crawlElapsed * 1000;
+  timingRefs.crawlStartTime.current = now - crawlElapsed * 1000;
   timingRefs.crawlPausedTime.current = 0;
-  timingRefs.crawlPauseStart.current = null;
+  timingRefs.crawlPauseStart.current = isPaused ? now : null;
   timingRefs.currentProgress.current = target.crawlProgress;
 
   // Phase timing not used in crawl phase

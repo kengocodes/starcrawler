@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Slider } from "./slider";
 import {
   Play,
@@ -15,6 +15,11 @@ import { Button } from "@/components/ui/button";
 import { copyToClipboard, formatTime, buildCrawlText, encodeCrawlData, getBaseUrl, isUrlLengthSafe } from "@/lib/utils";
 import { UI_CONSTANTS } from "@/lib/constants";
 import type { CrawlData } from "@/lib/types";
+
+// Controls auto-hide after this period of inactivity (YouTube-like behavior)
+const AUTO_HIDE_DELAY = 3000; // milliseconds
+// Shorter delay when the mouse leaves the controls area
+const MOUSE_LEAVE_HIDE_DELAY = 1000; // milliseconds
 
 export interface CrawlControlsProps {
   isPaused: boolean;
@@ -145,55 +150,63 @@ export function CrawlControls({
     externalVisible !== undefined ? externalVisible : internalVisible;
   const setIsVisible = onControlsVisibilityChange || setInternalVisible;
 
-  // Desktop: show controls on mouse move with auto-hide
-  useEffect(() => {
-    const handleMouseMove = () => {
-      setIsVisible(true);
-      setShowCenterButton(true);
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
+  const clearHideTimeout = useCallback(() => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Schedule the controls to hide after a delay
+  const scheduleHide = useCallback(
+    (delay: number = AUTO_HIDE_DELAY) => {
+      clearHideTimeout();
       hideTimeoutRef.current = setTimeout(() => {
         setIsVisible(false);
         setShowCenterButton(false);
-      }, 3000);
+      }, delay);
+    },
+    [clearHideTimeout, setIsVisible]
+  );
+
+  // Show the controls; auto-hide after a delay unless autoHide is false
+  // (e.g. while the user is dragging the slider)
+  const showControls = useCallback(
+    ({ autoHide = true }: { autoHide?: boolean } = {}) => {
+      setIsVisible(true);
+      setShowCenterButton(true);
+      clearHideTimeout();
+      if (autoHide) {
+        scheduleHide();
+      }
+    },
+    [clearHideTimeout, scheduleHide, setIsVisible]
+  );
+
+  // Desktop: show controls on mouse move with auto-hide
+  useEffect(() => {
+    const handleMouseMove = () => {
+      showControls();
     };
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
+      clearHideTimeout();
     };
-  }, [setIsVisible]);
+  }, [showControls, clearHideTimeout]);
 
   // When visibility is toggled externally (e.g., by CrawlDisplay), manage auto-hide timer
   // This ensures controls auto-hide after 3 seconds of inactivity (YouTube-like behavior)
   useEffect(() => {
     if (isVisible) {
       setShowCenterButton(true);
-      // Clear any existing timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-      // Set new timeout to hide controls after 3 seconds
-      hideTimeoutRef.current = setTimeout(() => {
-        setIsVisible(false);
-        setShowCenterButton(false);
-      }, 3000);
+      scheduleHide();
     } else {
       // Controls are hidden - clear any pending timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
+      clearHideTimeout();
     }
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-    };
-  }, [isVisible, setIsVisible]);
+    return clearHideTimeout;
+  }, [isVisible, scheduleHide, clearHideTimeout]);
 
   const handleShareUrl = async () => {
     try {
@@ -224,13 +237,9 @@ export function CrawlControls({
 
   // Handle slider value changes (during drag)
   const handleSliderChange = (newProgress: number) => {
-    // Show controls when user interacts with slider
-    setIsVisible(true);
-    setShowCenterButton(true);
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-    }
-    // Don't set timeout during drag - wait for commit
+    // Show controls when user interacts with slider.
+    // Don't auto-hide during drag - wait for commit.
+    showControls({ autoHide: false });
 
     // Increment call count to detect if this is a drag (multiple calls) vs click (single call)
     onChangeCallCountRef.current += 1;
@@ -267,14 +276,7 @@ export function CrawlControls({
     // Reset call count for next interaction
     onChangeCallCountRef.current = 0;
 
-    // Set timeout to hide after 3 seconds
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-    }
-    hideTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false);
-      setShowCenterButton(false);
-    }, 3000);
+    scheduleHide();
   };
 
   const totalTime = elapsed + remaining;
@@ -306,30 +308,12 @@ export function CrawlControls({
                 onPause();
               }
               // Keep controls visible when clicking the center button
-              setIsVisible(true);
-              setShowCenterButton(true);
-              if (hideTimeoutRef.current) {
-                clearTimeout(hideTimeoutRef.current);
-              }
-              // Set timeout to hide after 3 seconds
-              hideTimeoutRef.current = setTimeout(() => {
-                setIsVisible(false);
-                setShowCenterButton(false);
-              }, 3000);
+              showControls();
             }}
             onTouchStart={(e) => {
               e.stopPropagation(); // Prevent triggering crawl-display's handleInteraction
               // Keep controls visible when touching the center button
-              setIsVisible(true);
-              setShowCenterButton(true);
-              if (hideTimeoutRef.current) {
-                clearTimeout(hideTimeoutRef.current);
-              }
-              // Set timeout to hide after 3 seconds
-              hideTimeoutRef.current = setTimeout(() => {
-                setIsVisible(false);
-                setShowCenterButton(false);
-              }, 3000);
+              showControls();
             }}
             className="pointer-events-auto flex h-24 w-24 items-center justify-center bg-transparent p-0 text-crawl-yellow transition-all hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crawl-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-black touch-manipulation cursor-pointer"
             style={{ touchAction: "manipulation" }}
@@ -352,38 +336,14 @@ export function CrawlControls({
         }`}
         data-controls-area
         onMouseEnter={() => {
-          setIsVisible(true);
-          setShowCenterButton(true);
-          if (hideTimeoutRef.current) {
-            clearTimeout(hideTimeoutRef.current);
-          }
-          // Set timeout to hide after 3 seconds
-          hideTimeoutRef.current = setTimeout(() => {
-            setIsVisible(false);
-            setShowCenterButton(false);
-          }, 3000);
+          showControls();
         }}
         onMouseLeave={() => {
-          if (hideTimeoutRef.current) {
-            clearTimeout(hideTimeoutRef.current);
-          }
-          hideTimeoutRef.current = setTimeout(() => {
-            setIsVisible(false);
-            setShowCenterButton(false);
-          }, 1000);
+          scheduleHide(MOUSE_LEAVE_HIDE_DELAY);
         }}
-        onTouchStart={(e) => {
+        onTouchStart={() => {
           // Always show controls when touching the bottom controls area
-          setIsVisible(true);
-          setShowCenterButton(true);
-          if (hideTimeoutRef.current) {
-            clearTimeout(hideTimeoutRef.current);
-          }
-          // Set timeout to hide after 3 seconds
-          hideTimeoutRef.current = setTimeout(() => {
-            setIsVisible(false);
-            setShowCenterButton(false);
-          }, 3000);
+          showControls();
         }}
         style={{
           pointerEvents: isVisible ? "auto" : "none",

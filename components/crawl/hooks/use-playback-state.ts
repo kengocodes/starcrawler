@@ -84,7 +84,6 @@ export interface UsePlaybackStateReturn {
   startAnimation: () => void;
   markComplete: () => void;
   reset: () => void;
-  resetTimingRefs: () => void;
 }
 
 /**
@@ -119,10 +118,6 @@ export function usePlaybackState(): UsePlaybackStateReturn {
     dispatch({ type: "RESET" });
   }, [timingRefs]);
 
-  const resetRefs = useCallback(() => {
-    resetTimingRefs(timingRefs);
-  }, [timingRefs]);
-
   return {
     state,
     timingRefs,
@@ -131,7 +126,6 @@ export function usePlaybackState(): UsePlaybackStateReturn {
     startAnimation,
     markComplete,
     reset,
-    resetTimingRefs: resetRefs,
   };
 }
 

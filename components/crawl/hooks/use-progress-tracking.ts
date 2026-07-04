@@ -15,11 +15,15 @@ interface UseProgressTrackingParams {
   timingRefs: TimingRefs;
   controls: AnimationControls;
   onProgressChange?: (progress: number, elapsed: number, remaining: number) => void;
+  onComplete: () => void;
 }
 
 /**
  * Hook to track and report animation progress
- * Updates progress at regular intervals and handles opacity fading
+ * Updates progress at regular intervals, handles opacity fading, and fires
+ * completion when the crawl animation reaches its full duration. Detecting
+ * completion here (instead of a one-shot timer) keeps it correct across
+ * seeks and pauses, since the timing refs are re-read on every tick.
  */
 export function useProgressTracking({
   isPlaying,
@@ -31,6 +35,7 @@ export function useProgressTracking({
   timingRefs,
   controls,
   onProgressChange,
+  onComplete,
 }: UseProgressTrackingParams): void {
   // Initialize overall timing when playback starts
   useEffect(() => {
@@ -56,9 +61,9 @@ export function useProgressTracking({
     }
   }, [isPaused, timingRefs]);
 
-  // Report progress at regular intervals
+  // Report progress at regular intervals and detect completion
   useEffect(() => {
-    if (!isPlaying || isComplete || isPaused || !onProgressChange) return;
+    if (!isPlaying || isComplete || isPaused) return;
 
     const interval = setInterval(() => {
       if (timingRefs.overallStartTime.current === null) return;
@@ -66,9 +71,6 @@ export function useProgressTracking({
       const overallElapsed = calculateOverallElapsed(timingRefs);
       const overallProgress = Math.min(overallElapsed / durations.total, 1);
       const overallRemaining = Math.max(0, durations.total - overallElapsed);
-
-      // Stop tracking if animation is complete
-      if (isComplete || overallRemaining <= 0) return;
 
       // Update crawl-specific progress and opacity
       if (phase === "crawl" && crawlStarted && timingRefs.crawlStartTime.current !== null) {
@@ -79,9 +81,17 @@ export function useProgressTracking({
         // Update opacity based on progress
         const opacity = calculateOpacity(crawlProgress);
         controls.set({ opacity });
+
+        // The crawl animation has run its full course - fire completion.
+        // (onComplete is guarded against firing more than once upstream.)
+        if (crawlElapsed >= durations.crawl) {
+          onProgressChange?.(1, durations.total, 0);
+          onComplete();
+          return;
+        }
       }
 
-      onProgressChange(overallProgress, overallElapsed, overallRemaining);
+      onProgressChange?.(overallProgress, overallElapsed, overallRemaining);
     }, 100);
 
     return () => clearInterval(interval);
@@ -95,6 +105,7 @@ export function useProgressTracking({
     timingRefs,
     controls,
     onProgressChange,
+    onComplete,
   ]);
 }
 

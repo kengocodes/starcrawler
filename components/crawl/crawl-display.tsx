@@ -64,7 +64,6 @@ export function CrawlDisplay({
     startAnimation,
     markComplete,
     reset,
-    resetTimingRefs,
   } = usePlaybackState();
 
   // Notify parent of phase changes
@@ -72,16 +71,22 @@ export function CrawlDisplay({
     onPhaseChange?.(state.phase);
   }, [state.phase, onPhaseChange]);
 
-  // Handle completion with callback
+  // Handle completion with callback. Guarded by the hasCompleted ref so the
+  // parent's onComplete fires exactly once even if completion is detected
+  // multiple times (e.g. by successive progress ticks before React re-renders).
   const handleComplete = useCallback(() => {
+    if (timingRefs.hasCompleted.current) return;
     markComplete();
     onComplete?.();
-  }, [markComplete, onComplete]);
+  }, [timingRefs, markComplete, onComplete]);
 
-  // Reset state for seek operations (without full reset)
+  // Reset state for seek operations. This must be a *full* reset (playback
+  // state + timing refs): when seeking backward out of the crawl phase, the
+  // crawlStarted/animationStarted flags have to be cleared so the crawl
+  // animation can start again when its phase is reached.
   const handleResetForSeek = useCallback(() => {
-    resetTimingRefs();
-  }, [resetTimingRefs]);
+    reset();
+  }, [reset]);
 
   // Phase management
   useAnimationPhases({
@@ -89,13 +94,11 @@ export function CrawlDisplay({
     isPaused,
     phase: state.phase,
     crawlStarted: state.crawlStarted,
-    isComplete: state.isComplete,
     durations,
     timingRefs,
     controls,
     onPhaseChange: setPhase,
     onStartCrawl: startCrawl,
-    onComplete: handleComplete,
     onReset: reset,
   });
 
@@ -112,7 +115,7 @@ export function CrawlDisplay({
     onStartAnimation: startAnimation,
   });
 
-  // Progress tracking
+  // Progress tracking (also detects when the crawl animation completes)
   useProgressTracking({
     isPlaying,
     isPaused,
@@ -123,6 +126,7 @@ export function CrawlDisplay({
     timingRefs,
     controls,
     onProgressChange,
+    onComplete: handleComplete,
   });
 
   // Seeking
@@ -176,6 +180,27 @@ export function CrawlDisplay({
     onClose?.();
   };
 
+  // Seconds already elapsed in the logo phase, so LogoPhase can position its
+  // playhead correctly when mounted mid-phase (after a seek) and stay in
+  // sync with the phase clock. Reading the timing refs during render is safe
+  // here: they only change alongside a state update that re-renders anyway.
+  const logoStartOffset = (() => {
+    if (state.phase !== "logo" || timingRefs.phaseStartTime.current === null) {
+      return 0;
+    }
+    const inFlightPause = timingRefs.phasePauseStart.current
+      ? Date.now() - timingRefs.phasePauseStart.current
+      : 0;
+    return Math.max(
+      0,
+      (Date.now() -
+        timingRefs.phaseStartTime.current -
+        timingRefs.phasePausedTime.current -
+        inFlightPause) /
+        1000
+    );
+  })();
+
   return (
     <div
       className="fixed inset-0 z-10 cursor-pointer overflow-hidden"
@@ -202,7 +227,12 @@ export function CrawlDisplay({
       )}
 
       {state.phase === "logo" && (
-        <LogoPhase text={crawlData.logoText} duration={durations.logo} />
+        <LogoPhase
+          text={crawlData.logoText}
+          duration={durations.logo}
+          isPaused={isPaused}
+          startOffset={logoStartOffset}
+        />
       )}
 
       <CrawlTextPhase
